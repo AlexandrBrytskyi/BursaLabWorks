@@ -1,11 +1,8 @@
-package carno.lab1.controller;
+package carno.lab2.controller;
 
-import carno.lab1.model.Function;
-import carno.lab1.model.Minterm;
-import carno.lab1.model.Variable;
-import carno.lab1.view.GUI;
-import carno.lab1.view.TableIstinnostiFrame;
-import sun.reflect.generics.tree.Tree;
+import carno.lab2.model.*;
+import carno.lab2.view.GUI;
+import carno.lab2.view.TableIstinnostiFrame;
 
 import javax.swing.*;
 import javax.swing.table.AbstractTableModel;
@@ -38,7 +35,7 @@ public class Controller implements IController, ControllerObservable {
     MyRowTableModel myRowTableModel;
     private TableIstinnostiFrame tableIstinnostiFrame;
     private TabliciaIstinnostiTableModel tabliciaIstinnostiTableModel;
-    private Map<Integer, List<MyButton>> buttonsInColor = new HashMap<>();
+    private Map<Integer, List<Minterm>> whoCanBeScleyani = new HashMap<>();
 
 
     public Controller(GUI gui) {
@@ -254,22 +251,47 @@ public class Controller implements IController, ControllerObservable {
     public void showVariablesCouldBeScleyani(Minterm minterm) {
         System.out.println("С ним могут склеиватся следующие минтермы: ");
         List<Minterm> whoCanBeWithMe = new LinkedList<>();
-        List<MyButton> myButtons = new LinkedList<>();
         findSosedi(minterm, whoCanBeWithMe);
         findAnother(minterm, whoCanBeWithMe);
-        findButtonsAndChangeColor(myRowTableModel.getButtons(), myButtons, whoCanBeWithMe);
-        buttonsInColor.put(minterm.getNum(), myButtons);
         System.out.println(whoCanBeWithMe);
+        whoCanBeScleyani.put(minterm.getNum(), whoCanBeWithMe);
+        makeAndMinimizeFunction();
     }
 
     private void findAnother(Minterm minterm, List<Minterm> whoCanBeWithMe) {
         for (Minterm concrMint : tableIstinnosti) {
             if (minterm.getNum() != concrMint.getNum()) {
-                if (watchEqual(minterm, concrMint, new LinkedList<>())) {
-                    whoCanBeWithMe.add(concrMint);
-                }
+                if (watchEqual(concrMint, minterm, new LinkedList<Variable>())) whoCanBeWithMe.add(minterm);
             }
         }
+    }
+
+    private void makeAndMinimizeFunction() {
+        Function simpleDNF = makeFunctionDNF();
+        System.out.println(simpleDNF);
+        Function minimDNF = minimizeDNF(simpleDNF);
+        System.out.println("Minimised DNF " + minimDNF);
+        Function simpleKNF = makeFunctionKNF();
+        System.out.println(simpleKNF);
+    }
+
+    private Function minimizeDNF(Function simpleDNF) {
+        boolean madeChanges = true;
+        while (madeChanges) {
+            Collections.sort(simpleDNF.getMinterms());
+//            System.out.println(simpleDNF.getMinterms());
+            int size = simpleDNF.getMinterms().size();
+            for (int i = 0; i < simpleDNF.getMinterms().size() - 1; i++) {
+                List<Variable> equalVars = new LinkedList<>();
+                if (watchEqual(simpleDNF.getMinterms().get(i), simpleDNF.getMinterms().get(i + 1), equalVars)
+                        && !equalVars.isEmpty()) {
+                    simpleDNF.getMinterms().remove(i);
+                    simpleDNF.getMinterms().get(i).setVariables(equalVars);
+                }
+            }
+            if (size - simpleDNF.getMinterms().size() == 0) madeChanges = false;
+        }
+        return simpleDNF;
     }
 
     private boolean watchEqual(Minterm minterm, Minterm minterm1, List<Variable> equalVars) {
@@ -293,30 +315,41 @@ public class Controller implements IController, ControllerObservable {
         }
         return res;
     }
-
-    public void minternDeselected(int minternNum) {
-        List<MyButton> butts = buttonsInColor.remove(minternNum);
-        for (MyButton butt : butts) {
-            butt.mustChangeColor = false;
+    private Function makeFunctionKNF() {
+        List<Minterm> notNullMin = new LinkedList<>();
+        for (Minterm minterm : tableIstinnosti) {
+            if (!minterm.isFunctionValue()) {
+                notNullMin.add(copyInverseMinterm(minterm));
+            }
         }
+        return new KNFFunction(notNullMin);
     }
 
-    private void findButtonsAndChangeColor(Collection<List<MyButton>> buttons, List<MyButton> myButtons, List<Minterm> whoCanBeWithMe) {
-        List<MyButton> butList = new LinkedList<>();
-        for (List<MyButton> buttonList : buttons) {
-            for (MyButton button : buttonList) {
-                butList.add(button);
+    private Minterm copyInverseMinterm(Minterm minterm) {
+        List<Variable> vars = new LinkedList<>();
+        for (Variable variable : minterm.getVariables()) {
+            Variable variable1 = new Variable(variable.getName(), !variable.isInverted());
+            vars.add(variable1);
+        }
+        return new Minterm(minterm.getNum(), minterm.isFunctionValue(), vars);
+    }
+
+    private Function makeFunctionDNF() {
+        List<Minterm> notNullMin = new LinkedList<>();
+        for (Minterm minterm : tableIstinnosti) {
+            if (minterm.isFunctionValue()) {
+                notNullMin.add(copyMinterm(minterm));
             }
         }
-        for (Minterm minterm : whoCanBeWithMe) {
-            for (MyButton button : butList) {
-                if (button.getNumOfMinterm() == minterm.getNum()) {
-                    button.setMustChangeColor(true);
-                    myButtons.add(button);
-                    break;
-                }
-            }
+        return new DNFFunction(notNullMin);
+    }
+
+    private Minterm copyMinterm(Minterm minterm) {
+        List<Variable> vars = new LinkedList<>();
+        for (Variable variable : minterm.getVariables()) {
+            vars.add(variable);
         }
+        return new Minterm(minterm.getNum(), minterm.isFunctionValue(), vars);
     }
 
 
@@ -472,8 +505,8 @@ public class Controller implements IController, ControllerObservable {
             for (Map.Entry<Minterm, List<Minterm>> row : rows) {
                 List<Minterm> minterms = row.getValue();
                 List<MyButton> buttons = new LinkedList<>();
-                for (Minterm val : minterms) {
-                    MyButton button = new MyButton(val.getNum());
+                for (final Minterm val : minterms) {
+                    final MyButton button = new MyButton(val.getNum());
                     button.setText(val.isFunctionValue() ? "1" : "0");
                     button.addActionListener(new ActionListener() {
                         @Override
@@ -482,8 +515,10 @@ public class Controller implements IController, ControllerObservable {
                             if (button.getText().equals("0")) {
                                 button.setText("1");
                                 showVariable(val);
+                                button.setMustChangeColor(true);
                             } else {
-                                minternDeselected(val.getNum());
+                                button.setMustChangeColor(false);
+                                whoCanBeScleyani.remove(val.getNum());
                                 button.setText("0");
                             }
                             tableCarno.updateUI();
