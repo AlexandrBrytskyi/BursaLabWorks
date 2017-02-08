@@ -2,9 +2,9 @@ package rl.lab1;
 
 
 import org.apache.log4j.Logger;
+import rl.RLOperations;
 
 import java.math.BigDecimal;
-import java.math.BigInteger;
 
 public class FactorialCounter {
 
@@ -23,7 +23,7 @@ public class FactorialCounter {
     public RLChislo countFactorial(RLChislo num) {
         RLChislo one = RLOperations.rlFrom10(BigDecimal.ONE);
         if (num.equals(one)) return one;
-        return RLOperations.umnojitSimple(num, countFactorial(RLOperations.decrement(num)));
+        return RLOperations.multiply(num, countFactorial(RLOperations.decrement(num)));
     }
 
     public static void main(String[] args) {

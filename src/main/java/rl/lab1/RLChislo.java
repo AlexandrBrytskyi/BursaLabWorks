@@ -1,6 +1,7 @@
 package rl.lab1;
 
 
+import java.util.ArrayList;
 import java.util.List;
 
 public class RLChislo implements Cloneable {
@@ -75,6 +76,6 @@ public class RLChislo implements Cloneable {
 
     @Override
     public Object clone() throws CloneNotSupportedException {
-        return super.clone();
+        return new RLChislo(new Boolean(znakQ), new ArrayList<>(rozriads));
     }
 }
