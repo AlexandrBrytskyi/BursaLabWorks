@@ -5,18 +5,19 @@ import org.apache.log4j.Logger;
 import rl.RLOperations;
 
 import java.math.BigDecimal;
+import java.math.MathContext;
 
 public class FactorialCounter {
 
     private static final Logger logger = Logger.getLogger(FactorialCounter.class);
 
     public BigDecimal countFact10(BigDecimal num) {
-        if (num.equals(BigDecimal.ONE)) return BigDecimal.ONE.ONE;
-        return new BigDecimal(num.toString()).multiply(countFact10(num.subtract(BigDecimal.ONE)));
+        if (num.equals(BigDecimal.ONE)) return BigDecimal.ONE;
+        return num.multiply(countFact10(num.subtract(BigDecimal.ONE)), MathContext.DECIMAL128);
     }
 
-    public Float countFact10(Float num) {
-        if (num.equals(1f)) return 1f;
+    public Double countFact10(Integer num) {
+        if (num.equals(1)) return 1d;
         return num * countFact10(--num);
     }
 
@@ -27,9 +28,9 @@ public class FactorialCounter {
     }
 
     public static void main(String[] args) {
-//        countFactorialBigDecimal();
+        countFactorialBigDecimal();
 
-        countFactorialFloat();
+//        countFactorialDouble();
     }
 
     private static void countFactorialBigDecimal() {
@@ -47,10 +48,10 @@ public class FactorialCounter {
 //        System.out.println(Long.MAX_VALUE);
     }
 
-    private static void countFactorialFloat() {
+    private static void countFactorialDouble() {
         FactorialCounter fc = new FactorialCounter();
-        for (int i = 10; i < 20; i++) {
-            Float res_10 = fc.countFact10((float) i);
+        for (int i = 15; i < 25; i++) {
+            Double res_10 = fc.countFact10(i);
             logger.info("Факторіал звичайним методом " + i + " = " + res_10);
 
             RLChislo factorial10 = fc.countFactorial(RLOperations.rlFrom10(BigDecimal.valueOf(i)));
@@ -59,7 +60,7 @@ public class FactorialCounter {
 
             logger.info("Різниця " + (rlFloat.subtract(BigDecimal.valueOf(res_10))) + "\n\n");
         }
-        System.out.println(Float.MAX_VALUE);
+        System.out.println(Double.MAX_VALUE);
 //        System.out.println(Long.MAX_VALUE);
     }
 

@@ -9,7 +9,6 @@ import java.math.BigInteger;
 import java.math.MathContext;
 import java.util.*;
 import java.util.concurrent.*;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
 
 public class RLOperations {
@@ -24,7 +23,7 @@ public class RLOperations {
     public static RLChislo rlFrom10(BigDecimal number) {
         List<Long> znachOd = new ArrayList<>();
 
-        long stepen = (long) (Math.log(number.floatValue()) / Math.log(2));
+        long stepen = (long) (Math.log(number.doubleValue()) / Math.log(2));
 
         return new RLChislo(number.compareTo(BigDecimal.ZERO) > 0 ? false : true, findZnachOd(number.abs(), znachOd, stepen));
     }
@@ -302,7 +301,7 @@ public class RLOperations {
         return new RLChislo(false, res);
     }
 
-    public static RLKodingKeyValue encodePQ(RLChislo n, BigInteger start, BigInteger end) {
+    public static RLKodingKeyValue encodePQ(RLChislo n, boolean useStartEnd, BigInteger start, BigInteger end) {
         RLChislo sqrt;
         try {
             logger.info("Шукаємо квадратний корінь з числа " + n);
@@ -315,8 +314,18 @@ public class RLOperations {
         }
 
 
-        logger.info("Починаємо ітерації в 4 потоки");
         BigDecimal iterationsOnThread;
+
+        if (useStartEnd) {
+            if (!(end.compareTo(to10FromRL(sqrt).toBigInteger()) <= 0) || end.compareTo(start) < 0) {
+                throw new IllegalArgumentException("start must be < end and end must be <= sqrt");
+            }
+        } else {
+            start = BigInteger.valueOf(2);
+            end = to10FromRL(sqrt).toBigInteger();
+        }
+        logger.info("Починаємо ітерації в 4 потоки \nшукаэмо на проміжку " + start + " <+> " + end);
+
         BigDecimal allIterations = new BigDecimal(end.subtract(start));
         iterationsOnThread = new BigDecimal(allIterations.toBigIntegerExact().divide(BigInteger.valueOf(4)));
         logger.info("На кожен поток по " + iterationsOnThread + " варіантів ");
@@ -324,44 +333,39 @@ public class RLOperations {
 
         List<Future<RLKodingKeyValue>> futures = new ArrayList<>();
 
-        System.out.println(to10FromRL(sqrt));
-
         for (long i = 0; i < 4; i++) {
             BigDecimal iterations = iterationsOnThread.multiply(BigDecimal.valueOf(i)).add(new BigDecimal(start));
             if (i < 3) futures.add(service.submit(
-                    new Founder(
+                    new PQFounder(
                             iterations.toBigInteger(),
                             iterations.add(iterationsOnThread).toBigInteger(),
-                            n, sqrt)));
+                            n)));
             else {
                 futures.add(service.submit(
-                        new Founder(
+                        new PQFounder(
                                 iterations.toBigInteger(),
                                 iterations.add(new BigDecimal(end).subtract(iterations)).toBigInteger(),
-                                n, sqrt)));
+                                n)));
             }
         }
 
         Future<RLKodingKeyValue> resultFuture = service.submit(new Watcher(futures));
 
-        service.shutdown();
-
+        RLKodingKeyValue res = null;
         try {
-            boolean worked = service.awaitTermination(1, TimeUnit.DAYS);
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        }
-
-        System.out.println("here");
-
-        try {
-            return resultFuture.get();
+            service.shutdown();
+            res = resultFuture.get();
+            System.out.println(res);
+            service.awaitTermination(1,TimeUnit.DAYS);
         } catch (InterruptedException e) {
             e.printStackTrace();
         } catch (ExecutionException e) {
             e.printStackTrace();
         }
-        return null;
+
+
+
+        return res;
     }
 
     private static class Watcher implements Callable<RLKodingKeyValue> {
@@ -374,11 +378,12 @@ public class RLOperations {
 
         @Override
         public RLKodingKeyValue call() throws Exception {
+
             while (true) {
                 try {
                     for (Future<RLKodingKeyValue> future : futures) {
-                        if (future.isDone()) {
-                            RLKodingKeyValue res = future.get();
+                        RLKodingKeyValue res = future.get();
+                        if (future.isDone() && (res != null)) {
                             for (Future<RLKodingKeyValue> future2 : futures) {
                                 future2.cancel(true);
                             }
@@ -393,19 +398,17 @@ public class RLOperations {
         }
     }
 
-    private static class Founder implements Callable<RLKodingKeyValue> {
+    private static class PQFounder implements Callable<RLKodingKeyValue> {
 
         private BigInteger start;
         private BigInteger end;
         private RLChislo n;
-        private RLChislo sqrt;
 
-        public Founder(BigInteger start, BigInteger end, RLChislo n, RLChislo sqrt) {
+        public PQFounder(BigInteger start, BigInteger end, RLChislo n) {
             logger.info("starting new thread, counting from " + start + " to " + end);
             this.start = start;
             this.end = end;
             this.n = n;
-            this.sqrt = sqrt;
         }
 
         @Override
@@ -414,9 +417,10 @@ public class RLOperations {
             RLChislo q = null;
             boolean print = true;
             int counter = 0;
-            while (start.compareTo(end) <= 0) {
+            while (start.compareTo(end) <= 0&& !Thread.currentThread().isInterrupted()) {
 //                System.out.println("I live" + Thread.currentThread() + "\n" + "start=" + start + " end = " + end);
-                RLChislo currentI = subtract(sqrt, toRLFromBinary(start.toString(2)));
+//                RLChislo currentI = subtract(sqrt, toRLFromBinary(start.toString(2)));
+                RLChislo currentI = toRLFromBinary(start.toString(2));
                 try {
                     p = divide(n, currentI, Integer.MAX_VALUE, true);
                     logger.info("Знайдено ціле число!!! р = " + p);
@@ -498,7 +502,7 @@ public class RLOperations {
 
 
         RLChislo _n = rlFrom10(new BigDecimal(527));
-        encodePQ(_n, BigInteger.ONE, BigInteger.valueOf(527));
+        encodePQ(_n, false, null, null);
         System.out.println();
     }
 
