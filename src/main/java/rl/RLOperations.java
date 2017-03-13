@@ -413,17 +413,19 @@ public class RLOperations {
 
         @Override
         public RLKodingKeyValue call() throws Exception {
+            int steps = 0;
             RLChislo p = null;
             RLChislo q = null;
             boolean print = true;
             int counter = 0;
             while (start.compareTo(end) <= 0&& !Thread.currentThread().isInterrupted()) {
+                steps++;
 //                System.out.println("I live" + Thread.currentThread() + "\n" + "start=" + start + " end = " + end);
 //                RLChislo currentI = subtract(sqrt, toRLFromBinary(start.toString(2)));
                 RLChislo currentI = toRLFromBinary(start.toString(2));
                 try {
                     p = divide(n, currentI, Integer.MAX_VALUE, true);
-                    logger.info("Знайдено ціле число!!! р = " + p);
+                    logger.info("Знайдено ціле число!!! р = " + p+"\nstep = " + steps);
                     q = divide(n, p, Long.MAX_VALUE, true);
                     RLKodingKeyValue res = new RLKodingKeyValue(p, q, n);
                     logger.info("Результат: \n" + res);
@@ -445,66 +447,15 @@ public class RLOperations {
     }
 
     public static void main(String[] args) {
-        RLChislo rl1 = new RLChislo(false, new ArrayList<Long>() {{
-            add(8l);
-            add(4l);
-            add(2l);
-            add(1l);
-            add(0l);
-            add(-1l);
-            add(-2l);
-        }});
-        BigDecimal rl1_10 = to10FromRL(rl1);
-        System.out.println(rl1 + " = " + rl1_10);
-
-        RLChislo rl2 = new RLChislo(false, new ArrayList<Long>() {{
-            add(5l);
-            add(3l);
-            add(1l);
-            add(-5l);
-        }});
-        BigDecimal rl2_10 = to10FromRL(rl2);
-        System.out.println(rl2 + " = " + rl2_10);
-//        System.out.println(multiplyOnRozriad(rl2, 1l));
-        RLChislo rizn = subtract(rl1, rl2);
-
-        System.out.println(rl1 + " = " + rl1_10 + " subtract " + rl2 + " = " + rl2_10 + " = " + rizn + " = " + to10FromRL(rizn));
-
-        System.out.println("Umnoj simple10 " + (rl1_10.multiply(rl2_10)));
-        RLChislo umnojRes = multiply(rl1, rl2);
-        System.out.println("Umnoj rl " + umnojRes + "  =  " + to10FromRL(umnojRes));
-        System.out.println();
-        RLChislo divide = null;
-        try {
-            divide = divide(umnojRes, rl2, Integer.MAX_VALUE, false);
-        } catch (NumberIsNotSimpleException e) {
-            e.printStackTrace();
-        }
-        System.out.println("Dividing " + umnojRes + " = " + to10FromRL(umnojRes) + "\n on " + rl2 + " = " + to10FromRL(rl2) + "\n" +
-                "result is " + divide + " = " + to10FromRL(divide));
-        System.out.println();
-        System.out.println(multiply(divide, rl2));
-
-        RLChislo _81 = rlFrom10(new BigDecimal(80));
-
-        RLChislo _sqrt81 = null;
-        try {
-            _sqrt81 = sqrt(_81, 32, false);
-        } catch (NumberIsNotSimpleException e) {
-            e.printStackTrace();
-        }
-
-        System.out.println("Fing sqrt of " + _81 + " = " + to10FromRL(_81) + "\nresult is " + _sqrt81 + " = " + to10FromRL(_sqrt81));
-
-
-        System.out.println();
-        System.out.println();
-
-
-        RLChislo _n = rlFrom10(new BigDecimal(527));
+        RLChislo _n = rlFrom10(new BigDecimal("1127057400004069"));
         encodePQ(_n, false, null, null);
         System.out.println();
+
+
     }
 
+
+
+//293*827=242311;
 
 }

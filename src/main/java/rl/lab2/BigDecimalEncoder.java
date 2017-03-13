@@ -64,8 +64,8 @@ public class BigDecimalEncoder {
         RLKodingKeyValue res = null;
         try {
             service.shutdown();
-            res = resultFuture.get();
             service.awaitTermination(1, TimeUnit.DAYS);
+            res = resultFuture.get();
         } catch (InterruptedException e) {
             e.printStackTrace();
         } catch (ExecutionException e) {
@@ -136,28 +136,30 @@ public class BigDecimalEncoder {
                         lastSymb == '7' ||
                         lastSymb == '9') {
                     p = n.divide(currentI, new MathContext(128));
-//                System.out.println(p.remainder(BigDecimal.ONE)+ " rem");
+//                    System.out.println(p.remainder(BigDecimal.ONE) + " rem");
                     if (p.remainder(BigDecimal.ONE).equals(BigDecimal.ZERO)) {
                         logger.info("Знайдено ціле число!!! р = " + p);
-                        q = n.divide(p, MathContext.DECIMAL128);
+                        q = n.divide(p, MathContext.UNLIMITED);
                         RLKodingKeyValue res = new RLKodingKeyValue(RLOperations.toRLFromBinary(p.toBigIntegerExact().toString(2)),
                                 RLOperations.toRLFromBinary(q.toBigIntegerExact().toString(2)),
                                 RLOperations.toRLFromBinary(n.toBigIntegerExact().toString(2)));
                         logger.info("Результат: \n" + res);
                         return res;
-                    } else {
-                        start = start.add(BigDecimal.ONE);
-                        if (print) {
-                            logger.info(Thread.currentThread().getName() + ": ==> " + "p" + currentI + " не є цілим числом " + p.toPlainString());
-                            print = false;
-                        }
+                    }
+
+                    if (++counter == 1000000) {
+                        print = true;
+                        counter = 0;
+                    }
+
+                    if (print) {
+                        logger.info(Thread.currentThread().getName() + ": ==> " + "p" + currentI + " не є цілим числом " + p.toPlainString());
+                        print = false;
                     }
                 }
-                if (++counter == 1000000) {
-                    print = true;
-                    counter = 0;
-                }
+                start = start.add(BigDecimal.ONE);
             }
+
             return null;
         }
     }
@@ -166,8 +168,12 @@ public class BigDecimalEncoder {
 
         encodePQ(new BigDecimal("114381625757888867669235779976146612010218296721242362562561842935706935245733897830597123563958705058989075147599290026879543541"),
                 true,
-                new BigInteger("3490529510847650949147849619903898133417760638493387843990820577", 10),
+                new BigInteger("3490529510847650949147849619903898133417764638493387843900000000", 10),
                 new BigInteger("10694934584086471525314207693308900296322993593605128511616736585", 10));
+
+        /*114381625757888867669235779976146612010218296721242362562561842935706935245733897830597123563958705058989075147599290026879543541
+          3490529510847650949147849619903898133417764638493387843990820577
+          32769132993266709549961988190834461413177642967992942539798288533*/
     }
 }
 

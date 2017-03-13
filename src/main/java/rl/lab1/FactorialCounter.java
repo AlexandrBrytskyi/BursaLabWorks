@@ -13,7 +13,7 @@ public class FactorialCounter {
 
     public BigDecimal countFact10(BigDecimal num) {
         if (num.equals(BigDecimal.ONE)) return BigDecimal.ONE;
-        return num.multiply(countFact10(num.subtract(BigDecimal.ONE)), MathContext.DECIMAL128);
+        return num.multiply(countFact10(num.subtract(BigDecimal.ONE)), MathContext.DECIMAL64);
     }
 
     public Double countFact10(Integer num) {
@@ -28,14 +28,14 @@ public class FactorialCounter {
     }
 
     public static void main(String[] args) {
-        countFactorialBigDecimal();
+//        countFactorialBigDecimal();
 
-//        countFactorialDouble();
+        countFactorialDouble();
     }
 
     private static void countFactorialBigDecimal() {
         FactorialCounter fc = new FactorialCounter();
-        for (int i = 25; i < 40; i++) {
+        for (int i = 25; i < 41; i++) {
             BigDecimal res_10 = fc.countFact10(BigDecimal.valueOf(i));
             logger.info("Факторіал звичайним методом " + i + " = " + res_10);
 
@@ -50,7 +50,7 @@ public class FactorialCounter {
 
     private static void countFactorialDouble() {
         FactorialCounter fc = new FactorialCounter();
-        for (int i = 15; i < 25; i++) {
+        for (int i = 15; i < 35; i++) {
             Double res_10 = fc.countFact10(i);
             logger.info("Факторіал звичайним методом " + i + " = " + res_10);
 
