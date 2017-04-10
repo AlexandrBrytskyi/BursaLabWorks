@@ -28,9 +28,22 @@ public class RLOperations {
         return new RLChislo(number.compareTo(BigDecimal.ZERO) > 0 ? false : true, findZnachOd(number.abs(), znachOd, stepen));
     }
 
+    public static RLChislo powIntStep(RLChislo chislo, int stepen) {
+        if (stepen == 0) return new RLChislo(false, new ArrayList<Long>() {{
+            add(0l);
+        }});
+        if (stepen == 1) return chislo;
+        for (int i = 2; i < stepen; i++) {
+            chislo = RLOperations.multiply(chislo, chislo);
+        }
+        return chislo;
+    }
+
     private static List<Long> findZnachOd(BigDecimal number, List<Long> znachOd, long stepen) {
 
+
         BigDecimal dif = number.subtract(new BigDecimal(2).pow((int) stepen, MathContext.UNLIMITED));
+
         if (dif.equals(BigDecimal.ZERO)) {
             znachOd.add(stepen);
             return znachOd;
@@ -57,10 +70,21 @@ public class RLOperations {
         return rl.isZnakQ() ? res.multiply(new BigDecimal(-1)) : res;
     }
 
+
+    public static RLChislo sum(final RLChislo rl1, final RLChislo rl2, int Q) {
+        RLChislo res = sum(rl1, rl2);
+        if (res.getRozriads().size() < Q) return res;
+        res.setRozriads(res.getRozriads().subList(0, Q));
+        return res;
+    }
+
     public static RLChislo sum(final RLChislo rl1, final RLChislo rl2) {
         if (rl1 == null) return rl2;
         if (rl2 == null) return rl1;
-        if (rl1.isZnakQ() || rl2.isZnakQ()) return subtract(rl1, rl2);
+
+        if (rl1.isZnakQ() && !rl2.isZnakQ()) return subtract(rl2, rl1, true);
+        if (rl2.isZnakQ() && !rl1.isZnakQ()) return subtract(rl1, rl2, true);
+
         ArrayList<Long> rozriads = new ArrayList<Long>() {{
             for (Long aLong : rl1.getRozriads()) {
                 add(aLong);
@@ -71,10 +95,19 @@ public class RLOperations {
         }};
         sortOdinici(rozriads);
         zvestiPodibni(rozriads);
-        return new RLChislo(false, rozriads);
+        return new RLChislo(rl1.isZnakQ(), rozriads);
+    }
+
+    public static RLChislo multiply(final RLChislo rl1, final RLChislo rl2, int Q) {
+        RLChislo res = multiply(rl1, rl2);
+        if (res.getRozriads().size() < Q) return res;
+        res.setRozriads(res.getRozriads().subList(0, Q));
+        return res;
     }
 
     public static RLChislo multiply(RLChislo rl1, RLChislo rl2) {
+
+
         List<Long> odinici = new ArrayList<>();
         for (Long rl1Odinicia : rl1.getRozriads()) {
             for (Long rl2Odinicia : rl2.getRozriads()) {
@@ -118,13 +151,46 @@ public class RLOperations {
         } catch (CloneNotSupportedException e) {
             e.printStackTrace();
         }
-        return subtract(operand, rlFrom10(BigDecimal.ONE));
+        return subtract(operand, rlFrom10(BigDecimal.ONE), false);
     }
 
-    private static RLChislo subtract(RLChislo rl1, RLChislo rl2) {
+    public static RLChislo subtract(RLChislo rl1, RLChislo rl2, int Q, boolean ignoreZnak) {
+        RLChislo res = subtract(rl1, rl2, ignoreZnak);
+        if (res.getRozriads().size() < Q) return res;
+        res.setRozriads(res.getRozriads().subList(0, Q));
+        return res;
+    }
+
+    public static RLChislo subtract(RLChislo rl1, RLChislo rl2, boolean ignoreZnak) {
 
         RLChislo zmenshuvane = null;
         RLChislo vidyemnik = null;
+
+        if (!ignoreZnak) {
+
+            boolean rl1Vidyemne = rl1.isZnakQ();
+            boolean rl2Vidyemne = rl2.isZnakQ();
+
+            try {
+                rl1 = rl1.clone();
+                rl2 = rl2.clone();
+            } catch (CloneNotSupportedException e) {
+                e.printStackTrace();
+            }
+
+            if (rl1Vidyemne && rl2Vidyemne) {
+                rl2.setZnakQ(false);
+                return sum(rl1, rl2);
+            } else if (rl1Vidyemne && !rl2Vidyemne) {
+                rl1.setZnakQ(false);
+                RLChislo res = sum(rl1, rl2);
+                res.setZnakQ(true);
+            } else if (!rl1Vidyemne && rl2Vidyemne) {
+                rl2.setZnakQ(false);
+                return sum(rl1, rl2);
+            }
+
+        }
 
         try {
             RLChislo biggerOne = findBiggerOne(rl1, rl2);
@@ -133,6 +199,7 @@ public class RLOperations {
                 vidyemnik = (RLChislo) rl2.clone();
             } else {
                 zmenshuvane = (RLChislo) rl2.clone();
+                zmenshuvane.setZnakQ(true);
                 vidyemnik = (RLChislo) rl1.clone();
             }
         } catch (CloneNotSupportedException e) {
@@ -147,6 +214,7 @@ public class RLOperations {
             sortOdinici(zmenshuvane.getRozriads());
             zvestiPodibni(zmenshuvane.getRozriads());
         }
+
         return zmenshuvane;
     }
 
@@ -223,7 +291,7 @@ public class RLOperations {
                 if (needSimple && r < 0)
                     throw new NumberIsNotSimpleException("Число не має цілого кореня", new RLChislo(false, chastka));
             }
-            o = subtract(o, multiplied);
+            o = subtract(o, multiplied, (int) rozriadnost, true);
             chastka.add(r);
             dileneRozriads = o.getRozriads();
             if (dileneRozriads.size() == 0) isCounting = false;
@@ -254,6 +322,18 @@ public class RLOperations {
         return nRL;
     }
 
+    public static RLChislo toRLFromBinary(String binary, boolean znak) {
+        List<Long> rozriads = new ArrayList<>();
+        binary = new StringBuilder(binary).reverse().toString();
+        for (int i = 0; i < binary.length(); i++) {
+            if (binary.charAt(i) == '1') rozriads.add(Long.valueOf(i));
+        }
+        RLChislo nRL = new RLChislo(znak, rozriads);
+        RLOperations.sortOdinici(rozriads);
+        RLOperations.zvestiPodibni(rozriads);
+        return nRL;
+    }
+
     public static RLChislo sqrt(RLChislo chislo, int rozriads, boolean needSimple) throws NumberIsNotSimpleException {
 //      yi = N1(Oi-1) -1 -y1
         if (chislo.getRozriads().size() == 0) return null;
@@ -271,7 +351,7 @@ public class RLOperations {
         Long y1 = n / 2;
         res.add(y1);
         long rozriad = y1 * k;
-        o = subtract(o, new RLChislo(false, Arrays.asList(new Long[]{rozriad})));
+        o = subtract(o, new RLChislo(false, Arrays.asList(new Long[]{rozriad})), false);
         toExclude.getRozriads().add(rozriad);
         Long y = 0l;
 
@@ -282,16 +362,16 @@ public class RLOperations {
                 throw new NumberIsNotSimpleException("Число не має цілого кореня", new RLChislo(false, res));
             res.add(y);
             RLChislo rlRes = new RLChislo(false, res);
-            RLChislo stepen = subtract(multiply(rlRes, rlRes), toExclude);
+            RLChislo stepen = subtract(multiply(rlRes, rlRes), toExclude, true);
             while (findBiggerOne(o, stepen) != o) {
                 res.remove(y--);
                 if (needSimple && y < 0)
                     throw new NumberIsNotSimpleException("Число не має цілого кореня", new RLChislo(false, res));
                 res.add(y);
                 rlRes = new RLChislo(false, res);
-                stepen = subtract(multiply(rlRes, rlRes), toExclude);
+                stepen = subtract(multiply(rlRes, rlRes), toExclude, true);
             }
-            o = subtract(o, stepen);
+            o = subtract(o, stepen, true);
             toExclude.getRozriads().addAll(stepen.getRozriads());
             sortOdinici(toExclude.getRozriads());
             zvestiPodibni(toExclude.getRozriads());
@@ -356,13 +436,12 @@ public class RLOperations {
             service.shutdown();
             res = resultFuture.get();
             System.out.println(res);
-            service.awaitTermination(1,TimeUnit.DAYS);
+            service.awaitTermination(1, TimeUnit.DAYS);
         } catch (InterruptedException e) {
             e.printStackTrace();
         } catch (ExecutionException e) {
             e.printStackTrace();
         }
-
 
 
         return res;
@@ -418,14 +497,14 @@ public class RLOperations {
             RLChislo q = null;
             boolean print = true;
             int counter = 0;
-            while (start.compareTo(end) <= 0&& !Thread.currentThread().isInterrupted()) {
+            while (start.compareTo(end) <= 0 && !Thread.currentThread().isInterrupted()) {
                 steps++;
 //                System.out.println("I live" + Thread.currentThread() + "\n" + "start=" + start + " end = " + end);
 //                RLChislo currentI = subtract(sqrt, toRLFromBinary(start.toString(2)));
                 RLChislo currentI = toRLFromBinary(start.toString(2));
                 try {
                     p = divide(n, currentI, Integer.MAX_VALUE, true);
-                    logger.info("Знайдено ціле число!!! р = " + p+"\nstep = " + steps);
+                    logger.info("Знайдено ціле число!!! р = " + p + "\nstep = " + steps);
                     q = divide(n, p, Long.MAX_VALUE, true);
                     RLKodingKeyValue res = new RLKodingKeyValue(p, q, n);
                     logger.info("Результат: \n" + res);
@@ -453,7 +532,6 @@ public class RLOperations {
 
 
     }
-
 
 
 //293*827=242311;

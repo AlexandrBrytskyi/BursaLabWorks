@@ -1,6 +1,8 @@
 package rl.lab1;
 
 
+import rl.RLOperations;
+
 import java.util.ArrayList;
 import java.util.List;
 
@@ -42,9 +44,9 @@ public class RLChislo implements Cloneable {
 
     @Override
     public String toString() {
-        return (znakQ ? 1 : 0) +
+        return "{" + (znakQ ? 1 : 0) +
                 "." + rozriads.size() +
-                printRozriads(rozriads);
+                printRozriads(rozriads) + " = " + RLOperations.to10FromRL(this) + "}";
     }
 
     private String printRozriads(List<Long> rozriads) {
@@ -75,7 +77,7 @@ public class RLChislo implements Cloneable {
     }
 
     @Override
-    public Object clone() throws CloneNotSupportedException {
+    public RLChislo clone() throws CloneNotSupportedException {
         return new RLChislo(new Boolean(znakQ), new ArrayList<>(rozriads));
     }
 }
