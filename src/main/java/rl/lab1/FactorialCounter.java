@@ -10,11 +10,9 @@ import org.jfree.data.xy.XYDataset;
 import org.jfree.data.xy.XYSeries;
 import org.jfree.data.xy.XYSeriesCollection;
 import rl.RLOperations;
+import rl.ResultFrame;
 
 import javax.swing.*;
-import java.awt.*;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
 import java.math.BigDecimal;
 import java.math.MathContext;
 import java.util.HashMap;
@@ -41,7 +39,13 @@ public class FactorialCounter {
     }
 
     public static void main(String[] args) {
-        new ResultFrame();
+        ResultFrame resultFrame = new ResultFrame();
+        resultFrame.getStartButton().addActionListener(e -> {
+            int start = Integer.parseInt(JOptionPane.showInputDialog("Введіть число з якого будемо починати рахувати фактораіл (15)"));
+            int end = Integer.parseInt(JOptionPane.showInputDialog("Введіть число до якого будемо рахувати (>21)"));
+
+            countFactorialDouble(start,end,resultFrame);
+        });
     }
 
     private static void countFactorialDouble(int start, int end,ResultFrame resultFrame) {
@@ -91,63 +95,7 @@ public class FactorialCounter {
         frame.setVisible(true);
     }
 
-    static class ResultFrame extends JFrame {
 
-        private JPanel mainPanel;
-        private JTextArea output;
-        private JButton startButton;
-
-        public ResultFrame() throws HeadlessException {
-            super("Факторіал");
-            setSize(new Dimension(900, 600));
-            setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
-            initView();
-            showDialog("Вітаю, давайте перевіряти точність обчислень", "Вітання!");
-            add(mainPanel);
-            setVisible(true);
-        }
-
-
-        private void initView() {
-            mainPanel = new JPanel(new BorderLayout());
-            output = new JTextArea("Натискайте на кнопку для початку обрахунку\n");
-            JScrollPane pane = new JScrollPane(output, JScrollPane.VERTICAL_SCROLLBAR_ALWAYS,
-                    JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED);
-            output.setEditable(false);
-
-
-            startButton = new JButton("Рахувати");
-
-            startButton.addActionListener(new ActionListener() {
-                @Override
-                public void actionPerformed(ActionEvent e) {
-                    int start = Integer.parseInt(JOptionPane.showInputDialog("Введіть число з якого будемо починати рахувати фактораіл (15)"));
-                    int end = Integer.parseInt(JOptionPane.showInputDialog("Введіть число до якого будемо рахувати (>21)"));
-
-
-                    countFactorialDouble(start,end,ResultFrame.this);
-                }
-            });
-            mainPanel.add(pane, BorderLayout.CENTER);
-            mainPanel.add(startButton, BorderLayout.SOUTH);
-
-        }
-
-
-        public void appendToOutput(String message) {
-            output.append(message + "\n");
-        }
-
-
-        public void showDialog(String s, String title) {
-            JOptionPane.showMessageDialog(this,
-                    s,
-                    title,
-                    JOptionPane.INFORMATION_MESSAGE);
-        }
-
-
-    }
 }
 
 

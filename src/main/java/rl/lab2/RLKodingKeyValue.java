@@ -45,10 +45,10 @@ public class RLKodingKeyValue {
 
     @Override
     public String toString() {
-        return "RLKodingKeyValue{" +
+        return "{" +
                 "p=" + p + " = " + RLOperations.to10FromRL(p) + "\n" +
                 ", q=" + q + " = " + RLOperations.to10FromRL(q) + "\n" +
-                ", n=" + n + " = " + RLOperations.to10FromRL(n) + "\n" +
+                ", добуток=" + n + " = " + RLOperations.to10FromRL(n) + "\n" +
                 '}';
     }
 }

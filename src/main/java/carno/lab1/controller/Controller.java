@@ -5,7 +5,6 @@ import carno.lab1.model.Minterm;
 import carno.lab1.model.Variable;
 import carno.lab1.view.GUI;
 import carno.lab1.view.TableIstinnostiFrame;
-import sun.reflect.generics.tree.Tree;
 
 import javax.swing.*;
 import javax.swing.table.AbstractTableModel;

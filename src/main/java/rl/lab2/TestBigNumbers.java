@@ -4,8 +4,10 @@ package rl.lab2;
 import org.apache.log4j.Logger;
 import rl.NumberIsNotSimpleException;
 import rl.RLOperations;
+import rl.ResultFrame;
 import rl.lab1.RLChislo;
 
+import javax.swing.*;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 
@@ -13,63 +15,64 @@ public class TestBigNumbers {
 
     private static final Logger logger = Logger.getLogger(TestBigNumbers.class);
 
-    // просте число пишеш тут
-    public static final String N = "7238417";
-
 
     public static void main(String[] args) {
-        BigInteger bi = new BigInteger(N, 10);
+        final String[] inputNumber = {null};
+        ResultFrame resultFrame = new ResultFrame();
+        resultFrame.getStartButton().addActionListener(l -> {
+            inputNumber[0] = JOptionPane.showInputDialog("Введіть просте число для опрацювання (наприклад: 29 547 678 871)", "29547678871");
+            new Thread(new Runnable() {
+                @Override
+                public void run() {
+                    doCountPQ(inputNumber[0], resultFrame);
+                }
+            }).start();
+        });
+
+
+    }
+
+    private static void doCountPQ(String val, ResultFrame resultFrame) {
+        BigInteger bi = new BigInteger(val, 10);
         String bi_binary = bi.toString(2);
 
-        logger.info("Число N у 10й системі числення має вигляд " + N + "\n" + "тоді як у двійквій " + bi_binary);
+        String message = "Число N у 10й системі числення має вигляд " + val + "\n" + "тоді як у двійквій " + bi_binary;
+        logger.info(message);
+        resultFrame.appendToOutput(message);
 
         RLChislo nRL = RLOperations.toRLFromBinary(bi_binary);
 
         BigDecimal bigDecimal = RLOperations.to10FromRL(nRL);
 
-        logger.info("Тоді у РЛ формі має вигляд " + nRL);
-        logger.info("Для перевірки правильності переводу, переведемо знову у десяткову систему та зрівняємо результати\n" +
-                "Вхідне N = " + N + "\n" +
-                "Із  РЛ   = " + bigDecimal.toString());
+        String message1 = "Тоді у РЛ формі має вигляд " + nRL;
+        logger.info(message1);
+        resultFrame.appendToOutput(message1);
+        String message2 = "Для перевірки правильності переводу, переведемо знову у десяткову систему та зрівняємо результати\n" +
+                "Вхідне N = " + val + "\n" +
+                message1 + "\n" +
+                "Із  РЛ   = " + bigDecimal.toString();
+        logger.info(message2);
+        resultFrame.appendToOutput(message2);
 
-        logger.info("Починаэмо пошук ключів ");
+        String message3 = "Починаэмо пошук ключів ";
+        logger.info(message3);
+        resultFrame.appendToOutput(message3);
+
         RLChislo sqrtN;
         try {
             sqrtN = RLOperations.sqrt(nRL, Integer.MAX_VALUE, true);
         } catch (NumberIsNotSimpleException e) {
             sqrtN = e.getSimpleRL();
         }
-        System.out.println(RLOperations.to10FromRL(sqrtN));
 
-        RLOperations.encodePQ(nRL, true,
+        if (RLOperations.encodePQ(nRL, true,
 //                тут змінюєш роміжок на якому шукаємо (можливо від 2 до корня) бо на 0 не ділиться,
 // якшо ділимо на 1, то це буде результатом,
 // а це нас не влащтовує
-                new BigInteger("2",10),
-                RLOperations.to10FromRL(sqrtN).toBigInteger());
-
+                new BigInteger("2", 10),
+                RLOperations.to10FromRL(sqrtN).toBigInteger(), resultFrame) == null)
+            resultFrame.appendToOutput("Невірний добуток, немає результатів");
     }
-
-
-    public static BigInteger bigIntSqRootFloor(BigInteger x)
-            throws IllegalArgumentException {
-        if (x.compareTo(BigInteger.ZERO) < 0) {
-            throw new IllegalArgumentException("Negative argument.");
-        }
-        // square roots of 0 and 1 are trivial and
-        // y == 0 will cause a divide-by-zero exception
-        if (x.equals(BigInteger.ZERO) || x.equals(BigInteger.ONE)) {
-            return x;
-        } // end if
-        BigInteger two = BigInteger.valueOf(2L);
-        BigInteger y;
-        // starting with y = x / 2 avoids magnitude issues with x squared
-        for (y = x.divide(two);
-             y.compareTo(x.divide(y)) > 0;
-             y = ((x.divide(y)).add(y)).divide(two));
-        return y;
-    } // end bigIntSqRootFloor
-
 
 
 }

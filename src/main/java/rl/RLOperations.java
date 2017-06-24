@@ -9,6 +9,7 @@ import java.math.BigInteger;
 import java.math.MathContext;
 import java.util.*;
 import java.util.concurrent.*;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
 
 public class RLOperations {
@@ -270,8 +271,8 @@ public class RLOperations {
         if (dilene.getRozriads().size() == 0 || dilnik.getRozriads().size() == 0)
             throw new IllegalArgumentException("З нулями не працюємо!");
         try {
-            dilene = (RLChislo) dilene.clone();
-            dilnik = (RLChislo) dilnik.clone();
+            dilene =  dilene.clone();
+            dilnik =  dilnik.clone();
         } catch (CloneNotSupportedException e) {
             e.printStackTrace();
         }
@@ -381,7 +382,7 @@ public class RLOperations {
         return new RLChislo(false, res);
     }
 
-    public static RLKodingKeyValue encodePQ(RLChislo n, boolean useStartEnd, BigInteger start, BigInteger end) {
+    public static RLKodingKeyValue encodePQ(RLChislo n, boolean useStartEnd, BigInteger start, BigInteger end, ResultFrame resultFrame) {
         RLChislo sqrt;
         try {
             logger.info("Шукаємо квадратний корінь з числа " + n);
@@ -390,7 +391,7 @@ public class RLOperations {
             return new RLKodingKeyValue(sqrt, sqrt, n);
         } catch (NumberIsNotSimpleException e) {
             sqrt = e.getSimpleRL();
-            logger.info("Нажаль, корінь виявився не цілим числом, беремо лише його цілу частину " + sqrt + "\n= " + to10FromRL(sqrt));
+            logger.info("Нажаль, корінь виявився не цілим числом, беремо лише його цілу частину " + sqrt);
         }
 
 
@@ -404,11 +405,15 @@ public class RLOperations {
             start = BigInteger.valueOf(2);
             end = to10FromRL(sqrt).toBigInteger();
         }
-        logger.info("Починаємо ітерації в 4 потоки \nшукаэмо на проміжку " + start + " <+> " + end);
+        String message = "Починаємо ітерації в 4 потоки \nшукаэмо на проміжку " + start + " <+> " + end;
+        logger.info(message);
+        resultFrame.appendToOutput(message);
 
         BigDecimal allIterations = new BigDecimal(end.subtract(start));
         iterationsOnThread = new BigDecimal(allIterations.toBigIntegerExact().divide(BigInteger.valueOf(4)));
-        logger.info("На кожен поток по " + iterationsOnThread + " варіантів ");
+        String message1 = "На кожен поток по " + iterationsOnThread + " варіантів ";
+        logger.info(message1);
+        resultFrame.appendToOutput(message1);
         ExecutorService service = Executors.newFixedThreadPool(4);
 
         List<Future<RLKodingKeyValue>> futures = new ArrayList<>();
@@ -419,13 +424,13 @@ public class RLOperations {
                     new PQFounder(
                             iterations.toBigInteger(),
                             iterations.add(iterationsOnThread).toBigInteger(),
-                            n)));
+                            n, resultFrame)));
             else {
                 futures.add(service.submit(
                         new PQFounder(
                                 iterations.toBigInteger(),
                                 iterations.add(new BigDecimal(end).subtract(iterations)).toBigInteger(),
-                                n)));
+                                n, resultFrame)));
             }
         }
 
@@ -436,6 +441,7 @@ public class RLOperations {
             service.shutdown();
             res = resultFuture.get();
             System.out.println(res);
+            resultFrame.appendToOutput("Результат:\n"+res);
             service.awaitTermination(1, TimeUnit.DAYS);
         } catch (InterruptedException e) {
             e.printStackTrace();
@@ -482,12 +488,18 @@ public class RLOperations {
         private BigInteger start;
         private BigInteger end;
         private RLChislo n;
+        private ResultFrame resultFrame;
+        private static AtomicBoolean isCounting = new AtomicBoolean(true);
 
-        public PQFounder(BigInteger start, BigInteger end, RLChislo n) {
-            logger.info("starting new thread, counting from " + start + " to " + end);
+
+        public PQFounder(BigInteger start, BigInteger end, RLChislo n, ResultFrame resultFrame) {
+            String message = "starting new thread, counting from " + start + " to " + end;
+            logger.info(message);
+            resultFrame.appendToOutput(message);
             this.start = start;
             this.end = end;
             this.n = n;
+            this.resultFrame = resultFrame;
         }
 
         @Override
@@ -495,43 +507,35 @@ public class RLOperations {
             int steps = 0;
             RLChislo p = null;
             RLChislo q = null;
-            boolean print = true;
-            int counter = 0;
-            while (start.compareTo(end) <= 0 && !Thread.currentThread().isInterrupted()) {
+            while (start.compareTo(end) <= 0 && !Thread.currentThread().isInterrupted()&&isCounting.get()) {
                 steps++;
 //                System.out.println("I live" + Thread.currentThread() + "\n" + "start=" + start + " end = " + end);
 //                RLChislo currentI = subtract(sqrt, toRLFromBinary(start.toString(2)));
                 RLChislo currentI = toRLFromBinary(start.toString(2));
                 try {
                     p = divide(n, currentI, Integer.MAX_VALUE, true);
-                    logger.info("Знайдено ціле число!!! р = " + p + "\nstep = " + steps);
-                    q = divide(n, p, Long.MAX_VALUE, true);
+                    String message = "Знайдено ціле число!!! р = " + p + "\nstep = " + steps;
+                    isCounting.set(false);
+                    logger.info(message);
+                    resultFrame.appendToOutput(message);
+                    q = divide(n, p, Integer.MAX_VALUE, false);
                     RLKodingKeyValue res = new RLKodingKeyValue(p, q, n);
-                    logger.info("Результат: \n" + res);
+                    String message1 = "Результат: \n" + res;
+                    logger.info(message1);
+                    resultFrame.appendToOutput(message1);
+                    resultFrame.showDialog(res.toString(),"РЕЗУЛЬТАТ знайдено за " +steps + " кроків");
                     return res;
                 } catch (NumberIsNotSimpleException e) {
                     start = start.add(BigInteger.ONE);
-                    if (print) {
-                        logger.info("p" + to10FromRL(currentI) + " не є цілим числом, ціла частина: " + e.getSimpleRL());
-                        print = false;
-                    }
-                    if (++counter == 1000) {
-                        print = true;
-                        counter = 0;
-                    }
+                    String message = "p" + to10FromRL(currentI) + " не є цілим числом, ціла частина: " + e.getSimpleRL();
+                    logger.info(message);
+                    resultFrame.appendToOutput(message);
                 }
             }
             return null;
         }
     }
 
-    public static void main(String[] args) {
-        RLChislo _n = rlFrom10(new BigDecimal("1127057400004069"));
-        encodePQ(_n, false, null, null);
-        System.out.println();
-
-
-    }
 
 
 //293*827=242311;
